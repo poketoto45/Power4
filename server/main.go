@@ -5,10 +5,27 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"os"
 	"path/filepath"
 
 	fichier "main.go/Power4-classic"
 )
+
+var basePath string
+
+func init() {
+	// Déterminer le chemin de base du projet
+	wd, err := os.Getwd()
+	if err != nil {
+		panic(err)
+	}
+	basePath = wd
+
+	// Si on est dans le répertoire server, remonter à la racine
+	if filepath.Base(basePath) == "server" {
+		basePath = filepath.Dir(basePath)
+	}
+}
 
 // GameState représente l'état actuel du jeu
 type GameState struct {
@@ -50,12 +67,12 @@ func init() {
 // handleJeu retourne la page HTML du jeu
 func handleJeu(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
-	http.ServeFile(w, r, filepath.Join("Power4-classic/main", "page.html"))
+	http.ServeFile(w, r, filepath.Join(basePath, "Power4-classic/main", "page.html"))
 }
 
 // handleStatic sert les fichiers statiques
 func handleStatic(w http.ResponseWriter, r *http.Request) {
-	http.ServeFile(w, r, filepath.Join("Power4-classic/main", r.URL.Path[8:]))
+	http.ServeFile(w, r, filepath.Join(basePath, "Power4-classic/main", r.URL.Path[8:]))
 }
 
 // handleState retourne l'état actuel du jeu
@@ -164,6 +181,6 @@ func main() {
 	http.HandleFunc("/api/move", handleMove)
 	http.HandleFunc("/api/reset", handleReset)
 
-	fmt.Println("🎮 Serveur Power 4 démarré sur http://localhost:9091")
-	log.Fatal(http.ListenAndServe(":9091", nil))
+	fmt.Println("🎮 Serveur Power 4 démarré sur http://localhost:8181")
+	log.Fatal(http.ListenAndServe(":8181", nil))
 }
