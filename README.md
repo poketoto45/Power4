@@ -4,11 +4,6 @@ Une implémentation complète du jeu Power 4 jouable sur **localhost** avec une 
 
 ## 🚀 Démarrage rapide
 
-### Sur Linux/Mac
-```bash
-./START.sh
-```
-
 ### Avec Go directement
 ```bash
 go build -o server/server ./server
