@@ -4,12 +4,6 @@ Une implémentation complète du jeu Power 4 jouable sur **localhost** avec une 
 
 ## 🚀 Démarrage rapide
 
-### Avec Go directement
-```bash
-go build -o server/server ./server
-./server/server
-```
-
 ### Via terminal
 ```bash
 cd /home/thoma/git/Power4
