@@ -1,0 +1,200 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <title>Power4 - challenge code</title>
+  <link rel="stylesheet" href="/static/page.css">
+</head>
+<body>
+  <header>
+    <img class="logo1" src="/static/images/imgpower4.png" alt="puissance_4" width="200" height="150">
+    <h1 class="titre">POWER 4</h1>
+    <img class="logo2" src="/static/images/imgpower4.png" alt="puissance_4" width="200" height="150">
+  </header>
+
+  <nav>
+    <div>
+      <ol>
+        <li value="1"><a href="#jeu">Power 4</a></li>
+        <li><a href="#regle">Regles</a></li>
+      </ol>
+    </div>
+  </nav>
+
+  <main id="jeu">
+    <div class="game-container">
+      <div class="status-bar">
+        <h2 id="joueur-actuel">Joueur: <span id="joueur-nom">Rouge</span></h2>
+        <h2 id="statut" class="statut-normal">En cours...</h2>
+      </div>
+
+      <div class="board">
+        <div class="button-row" id="button-row"></div>
+        <div id="grille" class="grille"></div>
+      </div>
+
+      <div class="controls">
+        <button id="btn-reset" class="btn-reset">🔄 Nouvelle Partie</button>
+      </div>
+    </div>
+  </main>
+
+  <article id="regle" class="regle">
+    <div class="texte">
+      <div>
+        <h2 class="t_regle">Règles du Puissance 4</h2>
+        <p class="text">
+          Le Puissance 4 est un jeu de société qui se joue à deux.
+          Le but du jeu est d'être le premier à aligner quatre pions de sa couleur,
+          <br><br> soit horizontalement, verticalement ou en diagonale.
+          <br><br>
+          La grille de jeu est composée de six rangées et sept colonnes.
+          Chaque joueur choisit une couleur de pion, <br><br> par exemple rouge ou jaune.
+          <br><br>
+          À tour de rôle, les joueurs laissent tomber un pion dans la colonne de leur choix,
+          et celui-ci se place automatiquement sur la case libre la plus basse de la colonne.
+          <br><br>
+          Le jeu se poursuit ainsi jusqu'à ce qu'un joueur réussisse à aligner quatre de ses pions,
+          ce qui lui fait remporter la partie.
+          <br><br>
+          Si la grille est entièrement remplie sans qu'aucun joueur n'ait aligné quatre pions,
+          la partie se termine par un match nul.
+        </p>
+      </div>
+    </div>
+  </article>
+
+  <script>
+    const EMPTY = '.';
+    const RED = 'R';
+    const YELLOW = 'J';
+    const COLS = 7;
+    const ROWS = 6;
+
+    let gameBoard = [];
+    let currentPlayer = RED;
+    let gameOver = false;
+
+    // Initialiser la grille au chargement
+    async function initGame() {
+      // Créer les boutons une seule fois
+      const buttonRow = document.getElementById('button-row');
+      for (let c = 0; c < COLS; c++) {
+        const btn = document.createElement('button');
+        btn.className = 'col-btn';
+        btn.innerHTML = '<img src="/static/images/bouton.png" alt="colonne" class="btn-img">';
+        btn.onclick = () => placePion(c);
+        buttonRow.appendChild(btn);
+      }
+      
+      await fetchState();
+      renderBoard();
+    }
+
+    // Récupérer l'état du serveur
+    async function fetchState() {
+      try {
+        const response = await fetch('/api/state');
+        const data = await response.json();
+        gameBoard = data.grille;
+        currentPlayer = data.joueur_actuel;
+        gameOver = data.statut !== 'en_cours';
+        updateUI();
+      } catch (error) {
+        console.error('Erreur:', error);
+      }
+    }
+
+    // Placer un pion
+    async function placePion(col) {
+      if (gameOver) return;
+
+      try {
+        const response = await fetch('/api/move', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ colonne: col })
+        });
+        const data = await response.json();
+        
+        if (data.succes) {
+          gameBoard = data.grille;
+          currentPlayer = data.joueur_actuel;
+          gameOver = data.statut !== 'en_cours';
+          
+          renderBoard();
+          updateUI();
+          
+          if (gameOver) {
+            showWinner(data.statut);
+          }
+        } else {
+          alert(data.message);
+        }
+      } catch (error) {
+        console.error('Erreur:', error);
+      }
+    }
+
+    // Réinitialiser le jeu
+    async function resetGame() {
+      try {
+        const response = await fetch('/api/reset', { method: 'POST' });
+        const data = await response.json();
+        gameBoard = data.grille;
+        currentPlayer = RED;
+        gameOver = false;
+        renderBoard();
+        updateUI();
+      } catch (error) {
+        console.error('Erreur:', error);
+      }
+    }
+
+    // Afficher la grille avec la vraie image de grille en fond
+    function renderBoard() {
+      const grille = document.getElementById('grille');
+      grille.innerHTML = '';
+
+      for (let r = 0; r < ROWS; r++) {
+        for (let c = 0; c < COLS; c++) {
+          const cell = document.createElement('div');
+          cell.className = 'cell';
+          const pion = gameBoard[r][c];
+          if (pion === RED) {
+            cell.innerHTML = '<img src="/static/images/jeton_r.png" alt="rouge" class="pion">';
+          } else if (pion === YELLOW) {
+            cell.innerHTML = '<img src="/static/images/jeton_j.png" alt="jaune" class="pion">';
+          }
+          grille.appendChild(cell);
+        }
+      }
+    }
+
+    // Mettre à jour l'UI
+    function updateUI() {
+      const joueurNom = currentPlayer === RED ? 'Rouge' : 'Jaune';
+      document.getElementById('joueur-nom').textContent = joueurNom;
+    }
+
+    // Afficher le gagnant
+    function showWinner(statut) {
+      const statusEl = document.getElementById('statut');
+      if (statut.startsWith('gagne_')) {
+        const gagnant = statut === 'gagne_R' ? 'Rouge' : 'Jaune';
+        statusEl.textContent = '🎉 Joueur ' + gagnant + ' a gagné!';
+        statusEl.className = 'statut-win';
+      } else if (statut === 'egalite') {
+        statusEl.textContent = '🤝 Égalité!';
+        statusEl.className = 'statut-draw';
+      }
+    }
+
+    // Événements
+    document.getElementById('btn-reset').addEventListener('click', resetGame);
+
+    // Initialiser au chargement
+    initGame();
+  </script>
+</body>
+</html>
